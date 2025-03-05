@@ -6,6 +6,10 @@ if (!isset($_SESSION['cart'])) {
     $_SESSION['cart'] = [];
 }
 
+$products_per_page = 4; 
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1; 
+$offset = ($page - 1) * $products_per_page; 
+
 // Add product to cart
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['product_id'])) {
     $product_id = $_POST['product_id'];
@@ -21,7 +25,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['product_id'])) {
     }
 }
 
-// Remove product from cart
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['remove_index'])) {
     $remove_index = $_POST['remove_index'];
     if (isset($_SESSION['cart'][$remove_index])) {
@@ -29,8 +32,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['remove_index'])) {
     }
 }
 
-// Fetch products from database
-$result = $conn->query("SELECT * FROM products");
+$products = $conn->query("SELECT products.*, sellers.email FROM products 
+                          INNER JOIN sellers ON products.seller_id = sellers.id
+                          WHERE products.product_type = 'Product' 
+                          LIMIT $products_per_page OFFSET $offset");
+
+$services = $conn->query("SELECT products.*, sellers.email FROM products 
+                          INNER JOIN sellers ON products.seller_id = sellers.id
+                          WHERE products.product_type = 'Service'");
+                          
+
+$total_products_result = $conn->query("SELECT COUNT(*) AS total FROM products WHERE product_type = 'Product'");
+$total_products_row = $total_products_result->fetch_assoc();
+$total_products = $total_products_row['total'];
+$total_pages = ceil($total_products / $products_per_page); // Calculate total pages
+
 ?>
 
 <!DOCTYPE html>
@@ -38,9 +54,8 @@ $result = $conn->query("SELECT * FROM products");
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product Listing</title>
+    <title>Product & Service Listings</title>
     <style>
-        /* General Styles */
         body {
             font-family: 'Arial', sans-serif;
             margin: 0;
@@ -48,13 +63,6 @@ $result = $conn->query("SELECT * FROM products");
             background-color: #FAE1DD;
             display: flex;
             justify-content: center;
-        }
-        .products-section h2 {
-            text-align: right;
-            margin-right: -100px; /* Adjust this value for more or less shift */
-            font-size: 24px;
-            font-weight: bold;
-            color: #2F4858;
         }
         .container {
             display: flex;
@@ -64,7 +72,6 @@ $result = $conn->query("SELECT * FROM products");
             gap: 20px;
         }
 
-        /* Cart Section */
         .cart-section {
             width: 30%;
             padding: 20px;
@@ -96,16 +103,29 @@ $result = $conn->query("SELECT * FROM products");
             background-color: #a0001d;
         }
 
-        /* Product Section */
-        .products-section {
+        /* Product & Service Sections */
+        .listings-section {
             width: 70%;
             padding: 20px;
+        }
+
+        .section-title {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #2F4858;
+            border-bottom: 2px solid #2F4858;
+            padding-bottom: 5px;
+        }
+
+        .product-list, .service-list {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
+            margin-bottom: 30px;
         }
 
-        .product-card {
+        .product-card, .service-card {
             background-color: white;
             border-radius: 10px;
             padding: 15px;
@@ -114,18 +134,18 @@ $result = $conn->query("SELECT * FROM products");
             transition: transform 0.3s ease-in-out;
         }
 
-        .product-card:hover {
+        .product-card:hover, .service-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
         }
 
-        .product-card img {
+        .product-card img, .service-card img {
             width: 100px;
             height: 100px;
             border-radius: 5px;
         }
 
-        .product-card button {
+        .product-card button, .service-card button {
             background-color: #FF6F61;
             color: white;
             border: none;
@@ -135,24 +155,29 @@ $result = $conn->query("SELECT * FROM products");
             transition: 0.3s;
         }
 
-        .product-card button:hover {
+        .product-card button:hover, .service-card button:hover {
             background-color: #d84337;
         }
 
-        /* Responsive Design */
-        @media (max-width: 900px) {
-            .container {
-                flex-direction: column;
-                align-items: center;
-            }
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
 
-            .cart-section {
-                width: 100%;
-            }
+        .pagination a {
+            padding: 10px;
+            margin: 0 5px;
+            background-color: #FF6F61;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: 0.3s;
+        }
 
-            .products-section {
-                width: 100%;
-            }
+        .pagination a:hover {
+            background-color: #d84337;
         }
     </style>
 </head>
@@ -183,27 +208,62 @@ $result = $conn->query("SELECT * FROM products");
         ?>
     </div>
 
-    <!-- Right Side: Products Section -->
-    <div class="products-section">
-        <h2>Products List</h2><br>
-        <?php
-        if ($result->num_rows > 0) {
-            while ($row = $result->fetch_assoc()) {
-                echo "<div class='product-card'>";
-                echo "<h3>" . $row['name'] . "</h3>";
-                echo "<p>Price: $" . $row['price'] . "</p>";
-                echo "<img src='" . $row['image'] . "' alt='Product Image'>";
-                echo "<p>" . $row['description'] . "</p>";
-                echo "<form method='post'>";
-                echo "<input type='hidden' name='product_id' value='" . $row['id'] . "'>";
-                echo "<button type='submit'>Add to Cart</button>";
-                echo "</form>";
-                echo "</div>";
-            }
-        } else {
-            echo "<p>No products available.</p>";
-        }
-        ?>
+    <div class="listings-section">
+        
+        <div>
+            <h2 class="section-title">Products</h2>
+            <div class="product-list">
+                <?php
+                if ($products->num_rows > 0) {
+                    while ($row = $products->fetch_assoc()) {
+                        echo "<div class='product-card'>";
+                        echo "<h3>" . htmlspecialchars($row['name']) . "</h3>";
+                        echo "<p>Price: $" . htmlspecialchars($row['price']) . "</p>";
+                        echo "<img src='" . htmlspecialchars($row['image']) . "' alt='Product Image'>";
+                        echo "<p>" . htmlspecialchars($row['description']) . "</p>";
+                        echo "<p><strong>Seller Email:</strong> " . htmlspecialchars($row['email']) . "</p>";
+                        echo "<p><strong>Seller Phone-Number:" . htmlspecialchars($row['phone_number']) . "</p>";
+                        echo "<form method='post'>";
+                        echo "<input type='hidden' name='product_id' value='" . $row['id'] . "'>";
+                        echo "<button type='submit'>Add to Cart</button>";
+                        echo "</form>";
+                        echo "</div>";
+                    }
+                } else {
+                    echo "<p>No products available.</p>";
+                }
+                ?>
+            </div>
+        </div>
+        <div class="pagination">
+            <?php if ($page > 1): ?>
+                <a href="?page=<?php echo $page - 1; ?>">Previous</a>
+            <?php endif; ?>
+            <?php if ($page < $total_pages): ?>
+                <a href="?page=<?php echo $page + 1; ?>">Next</a>
+            <?php endif; ?>
+        </div>
+        <div>
+            <h2 class="section-title">Services</h2>
+            <div class="service-list">
+                <?php
+                if ($services->num_rows > 0) {
+                    while ($row = $services->fetch_assoc()) {
+                        echo "<div class='service-card'>";
+                        echo "<h3>" . htmlspecialchars($row['name']) . "</h3>";
+                        echo "<p>Price: $" . htmlspecialchars($row['price']) . "</p>";
+                        echo "<p>" . htmlspecialchars($row['description']) . "</p>";
+                        echo "<p><strong>Seller Email:</strong> " . htmlspecialchars($row['email']) . "</p>";
+                        echo "<p><strong>Seller Phone-Number:" . htmlspecialchars($row['phone_number']) . "</p>";
+                        echo "</div>";
+                    }
+                } else {
+                    echo "<p>No services available.</p>";
+                }
+                ?>
+            </div>
+        </div>
+        
     </div>
 </div>
 
