@@ -34,6 +34,7 @@
             <li><a href="index.php">Home</a></li>
             <li><a href="index.php">Crowdfunding</a></li>
             <li><a href="selling_products.php">Selling Products</a></li>
+            <li><a href="financial_literacy.php">Financial Literacy</a></li>
         </ul>
     </nav>
 
