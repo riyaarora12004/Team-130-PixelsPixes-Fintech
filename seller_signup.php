@@ -10,13 +10,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $email = $_POST['email'];
         $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
 
-        $stmt = $conn->prepare("INSERT INTO sellers (username, email, password) VALUES (?, ?, ?)");
-        $stmt->bind_param("sss", $username, $email, $password);
+        // Check if the username or email already exists in the database
+        $stmt = $conn->prepare("SELECT id FROM sellers WHERE username = ? OR email = ?");
+        $stmt->bind_param("ss", $username, $email);
+        $stmt->execute();
+        $stmt->store_result();
 
-        if ($stmt->execute()) {
-            echo "<div class='success'>Seller registered successfully! <a href='seller_login.php'>Login here</a></div>";
+        if ($stmt->num_rows > 0) {
+            echo "<div class='error'>Error: A seller with this username or email already exists.</div>";
         } else {
-            echo "<div class='error'>Error: " . $stmt->error . "</div>";
+            // Insert new seller into the database
+            $stmt = $conn->prepare("INSERT INTO sellers (username, email, password) VALUES (?, ?, ?)");
+            $stmt->bind_param("sss", $username, $email, $password);
+
+            if ($stmt->execute()) {
+                echo "<div class='success'>Seller registered successfully! <a href='seller_login.php'>Login here</a></div>";
+            } else {
+                echo "<div class='error'>Error: " . $stmt->error . "</div>";
+            }
         }
 
         $stmt->close();
