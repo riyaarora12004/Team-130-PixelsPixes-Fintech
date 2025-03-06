@@ -76,35 +76,40 @@ nav ul li a:hover {
     background: white;
     padding: 30px;
     margin: 20px auto;
-    width: 80%;
+    width: 600px;  /* Fixed width */
     border-radius: 15px;
     box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-    transition: transform 0.3s ease;
     display: flex;
     align-items: center;
     flex-direction: column;
     text-align: justify;
+    transition: transform 0.3s ease;
     animation: fadeInUp 1s ease-in-out;
+    position: relative; /* Ensure correct positioning for the image container */
 }
 
 .about-box:hover {
     transform: scale(1.02);
 }
 
-.about-img {
+/* Image Container */
+.about-img-container {
     width: 100%;
-    max-width: 600px;
+    position: relative;
+    overflow: hidden;
+}
+
+.about-img {
+    width: 100%; /* Ensures the image always takes the full width */
+    height: auto; /* Height is determined dynamically */
     border-radius: 15px;
-    margin-bottom: 15px;
-    height: auto;
-    max-height: 400px;
-    object-fit: cover;
     transition: transform 0.3s ease-in-out;
 }
 
 .about-img:hover {
     transform: scale(1.05);
 }
+
 
 /* Buttons */
 .button-group {
