@@ -8,16 +8,17 @@ if (!file_exists('database.php')) {
 include 'database.php';
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $entrepreneur_name = $_POST['entrepreneur_name'];  // Added entrepreneur name field
     $name = $_POST['name'];
     $idea = $_POST['idea'];
     $amount = $_POST['amount'];
     $crowdfunding_type = $_POST['crowdfunding_type'];
 
-    if (empty($name) || empty($idea) || empty($amount) || empty($crowdfunding_type)) {
+    if (empty($entrepreneur_name) || empty($name) || empty($idea) || empty($amount) || empty($crowdfunding_type)) {
         die("<div class='error'>All fields are required!</div>");
     }
 
-    $sql = "INSERT INTO entrepreneurs (name, idea, amount, crowdfunding_type) VALUES ('$name', '$idea', '$amount', '$crowdfunding_type')";
+    $sql = "INSERT INTO entrepreneurs (entrepreneur_name, name, idea, amount, crowdfunding_type) VALUES ('$entrepreneur_name', '$name', '$idea', '$amount', '$crowdfunding_type')";
     
     if ($conn->query($sql) === TRUE) {
         echo "<div class='success'>Idea submitted successfully!</div>";
@@ -134,6 +135,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <div class="form-container">
     <form method="POST">
+        <input type="text" name="entrepreneur_name" placeholder="Entrepreneur Name" required> <!-- Added entrepreneur name field -->
         <input type="text" name="name" placeholder="Business Name" required>
         <textarea name="idea" placeholder="Describe your idea" required></textarea>
         <input type="number" name="amount" placeholder="Amount Needed (₹)" required>
