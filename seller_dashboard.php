@@ -10,6 +10,11 @@ $products_per_page = 4;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1; 
 $offset = ($page - 1) * $products_per_page; 
 
+$search_query = '';
+if (isset($_GET['search'])) {
+    $search_query = htmlspecialchars($_GET['search']);
+}
+
 // Add product to cart
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['product_id'])) {
     $product_id = $_POST['product_id'];
@@ -32,21 +37,39 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['remove_index'])) {
     }
 }
 
-$products = $conn->query("SELECT products.*, sellers.email FROM products 
-                          INNER JOIN sellers ON products.seller_id = sellers.id
-                          WHERE products.product_type = 'Product' 
-                          LIMIT $products_per_page OFFSET $offset");
+// Modify queries to search by name or description
+$products_sql = "SELECT products.*, sellers.email FROM products 
+                 INNER JOIN sellers ON products.seller_id = sellers.id
+                 WHERE products.product_type = 'Product' 
+                 AND (products.name LIKE ? OR products.description LIKE ?)
+                 LIMIT $products_per_page OFFSET $offset";
+$services_sql = "SELECT products.*, sellers.email FROM products 
+                 INNER JOIN sellers ON products.seller_id = sellers.id
+                 WHERE products.product_type = 'Service' 
+                 AND (products.name LIKE ? OR products.description LIKE ?)";
 
-$services = $conn->query("SELECT products.*, sellers.email FROM products 
-                          INNER JOIN sellers ON products.seller_id = sellers.id
-                          WHERE products.product_type = 'Service'");
-                          
+$search_term = '%' . $search_query . '%';
 
-$total_products_result = $conn->query("SELECT COUNT(*) AS total FROM products WHERE product_type = 'Product'");
-$total_products_row = $total_products_result->fetch_assoc();
+// Prepare and execute the product query
+$stmt_products = $conn->prepare($products_sql);
+$stmt_products->bind_param("ss", $search_term, $search_term);
+$stmt_products->execute();
+$products = $stmt_products->get_result();
+
+// Prepare and execute the service query
+$stmt_services = $conn->prepare($services_sql);
+$stmt_services->bind_param("ss", $search_term, $search_term);
+$stmt_services->execute();
+$services = $stmt_services->get_result();
+
+// Count the total number of products matching the search
+$total_products_result = $conn->prepare("SELECT COUNT(*) AS total FROM products WHERE product_type = 'Product' AND (name LIKE ? OR description LIKE ?)");
+$total_products_result->bind_param("ss", $search_term, $search_term);
+$total_products_result->execute();
+$total_products_row = $total_products_result->get_result()->fetch_assoc();
 $total_products = $total_products_row['total'];
-$total_pages = ceil($total_products / $products_per_page); // Calculate total pages
 
+$total_pages = ceil($total_products / $products_per_page); // Calculate total pages
 ?>
 
 <!DOCTYPE html>
@@ -179,6 +202,38 @@ $total_pages = ceil($total_products / $products_per_page); // Calculate total pa
         .pagination a:hover {
             background-color: #d84337;
         }
+/* Search Bar */
+form {
+    margin: 20px 0;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+form input[type="text"] {
+    padding: 8px;
+    width: 200px;
+    height: 30px; /* Set height to keep it compact */
+    border: 1px solid #FF6F61;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+form button {
+    padding: 8px 12px;
+    height: 30px; /* Match height with input field */
+    background-color: #FF6F61;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+form button:hover {
+    background-color: #d84337;
+}
+
+
     </style>
 </head>
 <body>
@@ -207,9 +262,13 @@ $total_pages = ceil($total_products / $products_per_page); // Calculate total pa
         }
         ?>
     </div>
+    <!-- Search Form -->
 
     <div class="listings-section">
-        
+    <form method="GET">
+        <input type="text" name="search" placeholder="Search by name or description" value="<?php echo $search_query; ?>">
+        <button type="submit">Search</button>
+    </form>
         <div>
             <h2 class="section-title">Products</h2>
             <div class="product-list">
@@ -222,7 +281,7 @@ $total_pages = ceil($total_products / $products_per_page); // Calculate total pa
                         echo "<img src='" . htmlspecialchars($row['image']) . "' alt='Product Image'>";
                         echo "<p>" . htmlspecialchars($row['description']) . "</p>";
                         echo "<p><strong>Seller Email:</strong> " . htmlspecialchars($row['email']) . "</p>";
-                        echo "<p><strong>Seller Phone-Number:" . htmlspecialchars($row['phone_number']) . "</p>";
+                        echo "<p><strong>Seller Phone-Number:</strong> " . htmlspecialchars($row['phone_number']) . "</p>";
                         echo "<form method='post'>";
                         echo "<input type='hidden' name='product_id' value='" . $row['id'] . "'>";
                         echo "<button type='submit'>Add to Cart</button>";
@@ -237,10 +296,10 @@ $total_pages = ceil($total_products / $products_per_page); // Calculate total pa
         </div>
         <div class="pagination">
             <?php if ($page > 1): ?>
-                <a href="?page=<?php echo $page - 1; ?>">Previous</a>
+                <a href="?page=<?php echo $page - 1; ?>&search=<?php echo $search_query; ?>">Previous</a>
             <?php endif; ?>
             <?php if ($page < $total_pages): ?>
-                <a href="?page=<?php echo $page + 1; ?>">Next</a>
+                <a href="?page=<?php echo $page + 1; ?>&search=<?php echo $search_query; ?>">Next</a>
             <?php endif; ?>
         </div>
         <div>
@@ -254,7 +313,7 @@ $total_pages = ceil($total_products / $products_per_page); // Calculate total pa
                         echo "<p>Price: $" . htmlspecialchars($row['price']) . "</p>";
                         echo "<p>" . htmlspecialchars($row['description']) . "</p>";
                         echo "<p><strong>Seller Email:</strong> " . htmlspecialchars($row['email']) . "</p>";
-                        echo "<p><strong>Seller Phone-Number:" . htmlspecialchars($row['phone_number']) . "</p>";
+                        echo "<p><strong>Seller Phone-Number:</strong> " . htmlspecialchars($row['phone_number']) . "</p>";
                         echo "</div>";
                     }
                 } else {
