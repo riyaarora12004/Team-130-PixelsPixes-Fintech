@@ -247,7 +247,7 @@ form button:hover {
         if (!empty($_SESSION['cart'])) {
             foreach ($_SESSION['cart'] as $index => $item) {
                 echo "<div class='cart-item'>";
-                echo "<p>" . $item['name'] . " - $" . $item['price'] . "</p>";
+                echo "<p>" . $item['name'] . " - ₹" . $item['price'] . "</p>";
                 echo "<form method='post' style='display:inline;'>";
                 echo "<input type='hidden' name='remove_index' value='" . $index . "'>";
                 echo "<button type='submit' class='remove-btn'>Remove</button>";
@@ -256,7 +256,7 @@ form button:hover {
                 
                 $total += $item['price'];
             }
-            echo "<h3>Total: $" . number_format($total, 2) . "</h3>";
+            echo "<h3>Total: ₹" . number_format($total, 2) . "</h3>";
         } else {
             echo "<p>Cart is empty.</p>";
         }
@@ -277,7 +277,7 @@ form button:hover {
                     while ($row = $products->fetch_assoc()) {
                         echo "<div class='product-card'>";
                         echo "<h3>" . htmlspecialchars($row['name']) . "</h3>";
-                        echo "<p>Price: $" . htmlspecialchars($row['price']) . "</p>";
+                        echo "<p>Price: ₹" . htmlspecialchars($row['price']) . "</p>";
                         echo "<img src='" . htmlspecialchars($row['image']) . "' alt='Product Image'>";
                         echo "<p>" . htmlspecialchars($row['description']) . "</p>";
                         echo "<p><strong>Seller Email:</strong> " . htmlspecialchars($row['email']) . "</p>";
@@ -310,7 +310,7 @@ form button:hover {
                     while ($row = $services->fetch_assoc()) {
                         echo "<div class='service-card'>";
                         echo "<h3>" . htmlspecialchars($row['name']) . "</h3>";
-                        echo "<p>Price: $" . htmlspecialchars($row['price']) . "</p>";
+                        echo "<p>Price: ₹" . htmlspecialchars($row['price']) . "</p>";
                         echo "<p>" . htmlspecialchars($row['description']) . "</p>";
                         echo "<p><strong>Seller Email:</strong> " . htmlspecialchars($row['email']) . "</p>";
                         echo "<p><strong>Seller Phone-Number:</strong> " . htmlspecialchars($row['phone_number']) . "</p>";
